@@ -42,8 +42,8 @@ async function fetchAllContentAsJson(): Promise<string> {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 720 });
-  // await page.goto('https://ingatlan.com/lista/elado+budapest+lakas');
-  await page.goto('https://ingatlan.com/szukites/elado+lakas+xii-ker+100-150-m2');
+  await page.goto('https://ingatlan.com/lista/elado+budapest+lakas');
+  //await page.goto('https://ingatlan.com/szukites/elado+lakas+xii-ker+100-150-m2');
 
   const items = [];
   while (true) {
