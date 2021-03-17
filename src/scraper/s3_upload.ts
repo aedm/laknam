@@ -19,7 +19,7 @@ export async function uploadToS3(bucket: string, fileName: string, content: stri
   const s3 = new S3Client({ region: REGION });
 
   try {
-    const data = await s3.send(new PutObjectCommand(uploadParams));
+    await s3.send(new PutObjectCommand(uploadParams));
     console.log(
       "Successfully uploaded object: " + uploadParams.Bucket + "/" + uploadParams.Key
     );

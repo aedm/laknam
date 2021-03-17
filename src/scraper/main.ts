@@ -1,5 +1,3 @@
-import * as fs from "fs";
-
 const puppeteer = require('puppeteer');
 import {Page} from 'puppeteer';
 import { uploadToS3 } from "./s3_upload";
@@ -23,12 +21,14 @@ async function fetchPageAndGoToNext(page: Page): Promise<IPageResult> {
       size: el.querySelector('.listing__data--area-size')?.textContent,
       roomCount: el.querySelector('.listing__data--room-count')?.textContent,
       balconySize: el.querySelector('.listing__data--balcony-size')?.textContent,
+      timeStamp: new Date().toISOString(),
     }));
   });
   console.table(items);
 
   const [nextPageAnchor] = await page.$x("//a[contains(., 'Következő oldal')]");
   if (nextPageAnchor) {
+    console.log('Navigating to next page...');
     await nextPageAnchor.click();
     await page.waitForNavigation({ waitUntil: 'domcontentloaded' })
   }
@@ -38,11 +38,12 @@ async function fetchPageAndGoToNext(page: Page): Promise<IPageResult> {
   }
 }
 
-async function fetchAllContentAsJson(): Promise<string> {
-  const browser = await puppeteer.launch();
+async function fetchAllContentAsJson(firstPageUrl: string): Promise<string> {
+  const browser = await puppeteer.launch({headless: true, args:['--no-sandbox']});
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 720 });
-  await page.goto('https://ingatlan.com/lista/elado+budapest+lakas');
+  await page.goto(firstPageUrl);
+  // await page.goto('https://ingatlan.com/lista/elado+budapest+lakas');
   //await page.goto('https://ingatlan.com/szukites/elado+lakas+xii-ker+100-150-m2');
 
   const items = [];
@@ -62,10 +63,27 @@ async function fetchAllContentAsJson(): Promise<string> {
   return JSON.stringify(items, null, 2);
 }
 
-async function main() {
+async function processBatch(region: string) {
   const timeStamp = new Date().toISOString();
-  const result = await fetchAllContentAsJson();
-  await uploadToS3('ingatlan-com-scrapes', `scrape-${timeStamp}.json`, result);
+  const url = `https://ingatlan.com/szukites/elado+lakas+${region}`;
+  const result = await fetchAllContentAsJson(url);
+  await uploadToS3('ingatlan-com-scrapes', `scrape-${region}-${timeStamp}.json`, result);
+}
+
+async function main() {
+  const regions = [
+    'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
+    'xi', 'xii', 'xiii', 'xiv', 'xv', 'xvi', 'xvii', 'xviii', 'xix', 'xx',
+    'xi', 'xii', 'xiii',
+  ];
+  for (const region of regions) {
+    try {
+      await processBatch(`${region}-ker`);
+    }
+    catch (ex) {
+      console.trace(ex.toString());
+    }
+  }
 }
 
 main().catch(console.trace);
