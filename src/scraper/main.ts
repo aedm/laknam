@@ -30,7 +30,9 @@ async function fetchPageAndGoToNext(page: Page): Promise<IPageResult> {
   if (nextPageAnchor) {
     console.log('Navigating to next page...');
     await nextPageAnchor.click();
+    console.time();
     await page.waitForNavigation({ waitUntil: 'domcontentloaded' })
+    console.timeEnd();
   }
   return {
     items,
@@ -41,10 +43,18 @@ async function fetchPageAndGoToNext(page: Page): Promise<IPageResult> {
 async function fetchAllContentAsJson(firstPageUrl: string): Promise<string> {
   const browser = await puppeteer.launch({headless: true, args:['--no-sandbox']});
   const page = await browser.newPage();
+
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    if (['image', 'stylesheet', 'font'].indexOf(request.resourceType()) !== -1) {
+      request.abort();
+    } else {
+      request.continue();
+    }
+  });
+
   await page.setViewport({ width: 1280, height: 720 });
   await page.goto(firstPageUrl);
-  // await page.goto('https://ingatlan.com/lista/elado+budapest+lakas');
-  //await page.goto('https://ingatlan.com/szukites/elado+lakas+xii-ker+100-150-m2');
 
   const items = [];
   while (true) {
